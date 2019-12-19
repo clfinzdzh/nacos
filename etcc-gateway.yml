@@ -1,0 +1,166 @@
+server:
+    port: 8765
+# 需要外部化的配置
+config:
+    server-ip: 127.0.0.1
+    server-develop-ip: 192.168.200.51
+    mysql:
+        dbname: ag_auth_v1
+        username: yjanquan
+        password: yjanquan
+    rabbitmq:
+        username: dev
+        password: dev@123456
+    redis:
+        database: 2
+
+#请求和响应GZIP压缩支持
+feign:
+    httpclient:
+        enabled: false
+    okhttp:
+        enabled: true
+    compression:
+        request:
+            enabled: true
+            mime-types: text/xml,application/xml,application/json
+            min-request-size: 2048
+        response:
+            enabled: true
+
+spring:
+    datasource:
+        type: com.zaxxer.hikari.HikariDataSource
+        name: auth
+        url: jdbc:mysql://${config.server-develop-ip}/${config.mysql.dbname}?useUnicode=true&characterEncoding=UTF8
+        username: ${config.mysql.username}
+        password: ${config.mysql.password}
+        driver-class-name: com.mysql.jdbc.Driver
+        filters: stat
+        maxActive: 20
+        initialSize: 1
+        maxWait: 60000
+        minIdle: 1
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: select 'x'
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        maxOpenPreparedStatements: 20
+    redis:
+        database: ${config.redis.database}
+        host: ${config.server-develop-ip}
+        port: 6379
+        jedis:
+            pool:
+                max-active: 20
+    rabbitmq:
+        host: ${config.server-develop-ip}
+        port: 5672
+        username: ${config.rabbitmq.username}
+        password: ${config.rabbitmq.password}
+    sleuth:
+        enabled: true
+        http:
+            legacy:
+                enabled: true
+    cloud:
+        nacos:
+            discovery:
+                server-addr: ${config.server-ip}:8848
+        gateway:
+            discovery:
+                locator:
+                    lowerCaseServiceId: true
+                    enabled: true
+            routes:
+            # =====================================
+            -   id: etcc-auth
+                uri: lb://etcc-auth
+                order: 8000
+                predicates:
+                - Path=/etcc-api/auth/**
+                filters:
+                - StripPrefix=2
+            -   id: etcc-admin
+                uri: lb://etcc-admin
+                order: 8001
+                predicates:
+                - Path=/etcc-api/admin/**
+                filters:
+                - StripPrefix=1
+            -   id: etcc-biz
+                uri: lb://etcc-biz
+                order: 8002
+                predicates:
+                - Path=/etcc-api/biz/**
+                filters:
+                - StripPrefix=2
+            -   id: etcc-message
+                uri: lb://etcc-message
+                order: 8003
+                predicates:
+                - Path=/etcc-api/message/**
+                filters:
+                - StripPrefix=2
+        #  consul:
+        #    enabled: true
+        #    host: 192.168.200.51
+        #    port: 8500
+#        discovery:
+#            healthCheckPath: /actuator/health
+#            healthCheckInterval: 5s
+#            instanceId: ${spring.application.name}:${vcap.application.instance_id:${spring.application.instance_id:${random.value}}}
+#            register: true
+#            enabled: true
+
+logging:
+    level:
+        com.etcc.gate: info
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: '*'
+#  security:
+#    enabled: false
+
+
+gate:
+    ignore:
+        startWith: /auth/jwt,/admin/sysUserLocalauth/login,/admin/sysUserLocalauth/logout,/admin/commonType/*,/checkEquipment/state/*
+
+auth:
+    service-id: etcc-auth
+    user:
+        token-header: Authorization
+        secretKey: private-secret
+    client:
+        token-header: x-client-token
+        id: etcc-gateway  #不填则默认读取spring.application.name
+        secret: 123456
+
+ribbon:
+    eureka:
+        enabled: true
+    ReadTimeout: 60000
+    ConnectTimeout: 60000
+    MaxAutoRetries: 0
+    MaxAutoRetriesNextServer: 1
+    OkToRetryOnAllOperations: false
+
+hystrix:
+    threadpool:
+        default:
+            coreSize: 1000 ##并发执行的最大线程数，默认10
+            maxQueueSize: 1000 ##BlockingQueue的最大队列数
+            queueSizeRejectionThreshold: 500 ##即使maxQueueSize没有达到，达到queueSizeRejectionThreshold该值后，请求也会被拒绝
+    command:
+        default:
+            execution:
+                isolation:
+                    thread:
+                        timeoutInMilliseconds: 10000

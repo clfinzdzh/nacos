@@ -1,0 +1,223 @@
+server:
+    port: 8762
+
+# 需要外部化的配置
+config:
+    server-ip: 127.0.0.1
+    server-develop-ip: 192.168.200.51
+    mysql:
+        dbname: etcc_admin
+        username: yjanquan
+        password: yjanquan
+    rabbitmq:
+            username: dev
+            password: dev@123456
+    redis:
+            database: 2
+logging:
+    level:
+        #        tk.mybatis: DEBUG
+        com.etcc.admin: DEBUG
+#    file: E:/log/etcc-admin.log
+spring:
+    application:
+        name: etcc-admin
+    flyway:
+        baseline-on-migrate: true
+        enabled: true
+    freemarker:
+        checkTemplateLocation: false
+    cloud:
+        nacos:
+            discovery:
+                server-addr: ${config.server-ip}:8848
+    jackson:
+        date-format: yyyy-MM-dd HH:mm:ss
+        time-zone: GMT+8
+        default-property-inclusion: ALWAYS
+    datasource:
+        name: ${config.mysql.dbname}
+        url: jdbc:mysql://${config.server-develop-ip}:3306/${config.mysql.dbname}?useUnicode=true&characterEncoding=UTF8
+        username: ${config.mysql.username}
+        password: ${config.mysql.password}
+        # 使用druid数据源
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        filters: stat
+        maxActive: 20
+        initialSize: 1
+        maxWait: 60000
+        minIdle: 1
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: select 'x'
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        maxOpenPreparedStatements: 20
+    redis:
+        database: ${config.redis.database}
+        host: ${config.server-develop-ip}
+#        password: 192.168.200.51
+        port: 6379
+        timeout: 2000
+        #        pool:
+        #        max-active: 20
+        lettuce:
+            pool:
+                min-idle: 0
+                max-idle: 8
+                max-wait: -1ms
+                max-active: 8
+    rabbitmq:
+        host: ${config.server-develop-ip}
+        port: 5672
+        username: ${config.rabbitmq.username}
+        password: ${config.rabbitmq.password}
+    sleuth:
+        enabled: true
+        http:
+            legacy:
+                enabled: true
+#    cloud:
+#       consul:
+#         enabled: true
+#         host: 192.168.200.51
+#         port: 8500
+#         discovery:
+#           healthCheckPath: /actuator/health
+#           healthCheckInterval: 5s
+#           instanceId: ${spring.application.name:${vcap.application.instance_id:${spring.application.instance_id:${random.value
+#           register: true
+#           enabled: true
+
+#mybatis-plus
+mybatis-plus:
+    mapper-locations: classpath*:com/etcc/**/mapper/xml/*.xml
+    #实体扫描，多个package用逗号或者分号分隔
+    typeAliasesPackage: com.etcc.admin.entity
+    global-config:
+        #主键类型  0:"数据库ID自增", 1:"用户输入ID",2:"全局唯一ID (数字类型唯一ID)", 3:"全局唯一ID UUID";
+        id-type: 2
+        #字段策略 0:"忽略判断",1:"非 NULL 判断"),2:"非空判断"
+        field-strategy: 1
+        #驼峰下划线转换
+        db-column-underline: true
+        #刷新mapper 调试神器
+        refresh-mapper: true
+        #数据库大写下划线转换
+        #capital-mode: true
+        # Sequence序列接口实现类配置
+        #key-generator: com.baomidou.mybatisplus.extension.incrementer.OracleKeyGenerator
+        #自定义填充策略接口实现
+        #meta-object-handlers: com.baomidou.springboot.xxx
+        #自定义SQL注入器
+        #    sql-injector: com.baomidou.mybatisplus.mapper.LogicSqlInjector
+        db-config:
+            #逻辑删除配置
+            logic-delete-value: 1 # 逻辑已删除值(默认为 1)
+            logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
+    configuration:
+        map-underscore-to-camel-case: true
+        cache-enabled: false
+        call-setters-on-nulls: true
+
+
+#sample:
+#    zipkin:
+#        # When enabled=false, traces log to the console. Comment to send to zipkin
+#        enabled: false
+
+# 必须配置
+feign:
+    client:
+        default:
+            #这里时间一定要调长，否则feign客户端会报ReadTimeOut  服务端报Error parsing HTTP request header
+            connectTimeout: 60000
+            readTimeout: 60000
+    httpclient:
+        enabled: false
+#  okhttp:
+#    enabled: true
+
+ribbon:
+    eureka:
+        enabled: true
+    ReadTimeout: 100000
+    ConnectTimeout: 100000
+    MaxAutoRetries: 0
+    MaxAutoRetriesNextServer: 1
+    OkToRetryOnAllOperations: false
+
+hystrix:
+    threadpool:
+        default:
+            coreSize: 1000 ##并发执行的最大线程数，默认10
+            maxQueueSize: 1000 ##BlockingQueue的最大队列数
+            queueSizeRejectionThreshold: 500 ##即使maxQueueSize没有达到，达到queueSizeRejectionThreshold该值后，请求也会被拒绝
+    command:
+        default:
+            execution:
+                isolation:
+                    thread:
+                        timeoutInMilliseconds: 110000
+
+
+auth:
+    service-id: etcc-auth
+    user:
+        token-header: Authorization
+        secretKey: private-secret
+    client:
+        id: etcc-admin
+        secret: 123456
+        token-header: x-client-token
+        expire: 14400
+
+##redis-cache 相关
+#redis:
+#    pool:
+#        maxActive: 300
+#        maxIdle: 100
+#        maxWait: 1000
+#    #    host: ${REDIS_HOST:localhost
+#    #    port:  ${REDIS_PORT:6379
+#    host: 10.5.190.22
+#    port: 6379
+#    password:
+#    timeout: 2000
+#    # 服务或应用名
+#    sysName: etcc-admin
+#    enable: true
+#    database: 0
+
+#management:
+#    endpoints:
+#        web:
+#            exposure:
+#                include: ["health","info"]
+
+
+
+
+
+#------------------------------------------------
+#
+#
+##redis-cache 相关
+#redis:
+#    pool:
+#        maxActive: 300
+#        maxIdle: 100
+#        maxWait: 1000
+#    #    host: ${REDIS_HOST:localhost
+#    #    port:  ${REDIS_PORT:6379
+#    host: 192.168.200.51
+#    port: 6379
+#    password:
+#    timeout: 2000
+#    # 服务或应用名
+#    sysName: etcc-admin
+#    enable: true
+#    database: 0
